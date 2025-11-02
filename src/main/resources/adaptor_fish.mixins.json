@@ -4,6 +4,7 @@
   "package": "com.adaptor.adaptor_fish.mixin",
   "compatibilityLevel": "JAVA_21",
   "mixins": [
+    "FishingBobberEntityMixin"
   ],
   "injectors": {
     "defaultRequire": 1
