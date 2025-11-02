@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "id": "adaptor_fish",
+  "version": "${version}",
+  "name": "adaptor_fish",
+  "description": "",
+  "authors": [],
+  "contact": {},
+  "license": "BSD-3-Clause",
+  "icon": "assets/adaptor_fish/icon.png",
+  "environment": "*",
+  "entrypoints": {
+    "fabric-datagen": [
+      "com.adaptor.adaptor_fish.client.Adaptor_fishDataGenerator"
+    ],
+    "client": [
+      "com.adaptor.adaptor_fish.client.Adaptor_fishClient"
+    ],
+    "main": [
+      "com.adaptor.adaptor_fish.Adaptor_fish"
+    ]
+  },
+  "mixins": [
+    "adaptor_fish.mixins.json",
+    {
+      "config": "adaptor_fish.client.mixins.json",
+      "environment": "client"
+    }
+  ],
+  "depends": {
+    "fabricloader": ">=${loader_version}",
+    "fabric": "*",
+    "minecraft": "${minecraft_version}"
+  }
+}
