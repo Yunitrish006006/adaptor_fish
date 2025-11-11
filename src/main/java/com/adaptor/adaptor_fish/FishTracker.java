@@ -9,13 +9,12 @@ import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvents;
+import net.minecraft.text.Text;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.math.random.Random;
 
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.*;
 
 public class FishTracker {
     private static final List<TrackedFish> trackedFishes = new LinkedList<>();
@@ -108,12 +107,14 @@ public class FishTracker {
     private static void collectFish(ServerWorld world, ServerPlayerEntity player, FishEntity fish) {
         world.playSound(null, player.getBlockPos(),
                 SoundEvents.ENTITY_EXPERIENCE_ORB_PICKUP, SoundCategory.PLAYERS, 0.4F, 1.7F);
-
-        switch (fish.getName().getString()) {
-            case "Salmon" -> player.giveItemStack(new ItemStack(Items.SALMON));
-            case "Cod" -> player.giveItemStack(new ItemStack(Items.COD));
-            case "Tropical Fish" -> player.giveItemStack(new ItemStack(Items.TROPICAL_FISH));
-            case "Pufferfish" -> player.giveItemStack(new ItemStack(Items.PUFFERFISH));
+        String fishName = Arrays.stream(fish.getType().getTranslationKey().split("\\.")).toList().getLast();
+        switch (fishName) {
+            case "salmon" -> player.giveItemStack(new ItemStack(Items.SALMON));
+            case "cod" -> player.giveItemStack(new ItemStack(Items.COD));
+            case "tropical_fish" -> player.giveItemStack(new ItemStack(Items.TROPICAL_FISH));
+            case "pufferfish" -> player.giveItemStack(new ItemStack(Items.PUFFERFISH));
+            case "glow_squid" -> player.giveItemStack(new ItemStack(Items.GLOW_INK_SAC));
+            default -> player.sendMessage(Text.literal("Fished " + fishName), false);
         }
 
         fish.discard();
