@@ -1,15 +1,27 @@
 package com.adaptor.adaptor_fish.mixin;
 
+import com.adaptor.adaptor_fish.FishTracker;
+import net.minecraft.entity.Entity;
+import net.minecraft.entity.ItemEntity;
 import net.minecraft.entity.passive.*;
 import net.minecraft.entity.projectile.FishingBobberEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
+import net.minecraft.item.Items;
+import net.minecraft.network.message.MessageType;
+import net.minecraft.registry.tag.ItemTags;
+import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
+import net.minecraft.text.Text;
 import net.minecraft.util.math.Vec3d;
+import net.minecraft.world.World;
+import org.jetbrains.annotations.Nullable;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.Redirect;
 
 @Mixin(FishingBobberEntity.class)
 public abstract class FishingBobberEntityMixin {
@@ -20,41 +32,58 @@ public abstract class FishingBobberEntityMixin {
     @Shadow
     public abstract PlayerEntity getPlayerOwner();
 
-    @Inject(method = "use", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/World;spawnEntity(Lnet/minecraft/entity/Entity;)Z"), cancellable = false)
-    private void onSpawnLoot(ItemStack usedItem, org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable<Integer> cir) {
-        FishingBobberEntity bobber = (FishingBobberEntity) (Object) this;
+    @Shadow
+    @Nullable
+    public abstract Entity getHookedEntity();
 
+//    @Shadow
+//    protected abstract boolean deflectsAgainstWorldBorder();
 
-        if (!bobber.getEntityWorld().isClient() && this.caughtFish) {
-            PlayerEntity player = this.getPlayerOwner();
-            if (player != null && bobber.getEntityWorld() instanceof ServerWorld serverWorld) {
-                spawnLiveFish(serverWorld, bobber, player);
+    @Redirect(method = "use", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/World;spawnEntity(Lnet/minecraft/entity/Entity;)Z"))
+    private boolean onWorldSpawnEntity(World world, Entity entity) {
+        if (!world.isClient() && entity instanceof ItemEntity itemEntity) {
+            ItemStack stack = itemEntity.getStack();
+            ServerPlayerEntity player = (ServerPlayerEntity) this.getPlayerOwner();
+            if (this.caughtFish && this.getHookedEntity() == null && stack.isIn(ItemTags.FISHES)) {
+                spawnFish(stack, (ServerWorld) world, (FishingBobberEntity)(Object)this, player);
+                return false;
             }
         }
+        return world.spawnEntity(entity);
     }
 
-    private void spawnLiveFish(ServerWorld world, FishingBobberEntity bobber, PlayerEntity player) {
-        FishEntity fish = createRandomFish(world);
+    @Unique
+    private void spawnFish(ItemStack stack, ServerWorld world, FishingBobberEntity bobber, ServerPlayerEntity player) {
+        spawnLiveFish(world, bobber, player, stack.getItem().getTranslationKey());
+    }
+
+    @Unique
+    private void spawnLiveFish(ServerWorld world, FishingBobberEntity bobber, ServerPlayerEntity player, String fishType) {
+        FishEntity fish = createFish(world, fishType);
+        if (fish == null) return;
         fish.setPosition(bobber.getX(), bobber.getY(), bobber.getZ());
         Vec3d direction = player.getEyePos().subtract(fish.getEntityPos()).normalize();
-        double speed = 0.6;
-        fish.setVelocity(direction.x * speed, direction.y * speed + 0.3, direction.z * speed);
         fish.setAir(fish.getMaxAir());
         world.spawnEntity(fish);
+
+        double initialSpeed = 0.5;
+        fish.setVelocity(direction.x * initialSpeed, direction.y * initialSpeed + 0.2, direction.z * initialSpeed);
+
+        FishTracker.trackFish(world, fish, player);
     }
 
-    private FishEntity createRandomFish(ServerWorld world) {
-        double random = world.getRandom().nextDouble();
+    @Unique
+    private FishEntity createFish(ServerWorld world, String fishType) {
 
-        if (random < 0.6) {
-            return new CodEntity(net.minecraft.entity.EntityType.COD, world);
-        } else if (random < 0.85) {
-            return new SalmonEntity(net.minecraft.entity.EntityType.SALMON, world);
-        } else if (random < 0.98) {
-            return new TropicalFishEntity(net.minecraft.entity.EntityType.TROPICAL_FISH, world);
-        } else {
-            return new PufferfishEntity(net.minecraft.entity.EntityType.PUFFERFISH, world);
-        }
+        String type = fishType.replace("item.minecraft.", "");
+
+        return switch (type) {
+            case "cod" -> new CodEntity(net.minecraft.entity.EntityType.COD, world);
+            case "salmon" -> new SalmonEntity(net.minecraft.entity.EntityType.SALMON, world);
+            case "tropical_fish" -> new TropicalFishEntity(net.minecraft.entity.EntityType.TROPICAL_FISH, world);
+            case "pufferfish" -> new PufferfishEntity(net.minecraft.entity.EntityType.PUFFERFISH, world);
+            default -> null;
+        };
     }
 }
 
