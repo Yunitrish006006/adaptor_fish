@@ -11,5 +11,9 @@ public class Adaptor_fish implements ModInitializer {
     @Override
     public void onInitialize() {
         LOGGER.info("Adaptor Fish initialized - Live fish will now fly towards you when fishing!");
+
+        // 註冊鋤頭快速收穫功能
+        CropHarvestHelper.register();
+        LOGGER.info("Crop harvest helper registered - Right-click mature crops with a hoe to harvest and replant!");
     }
 }
